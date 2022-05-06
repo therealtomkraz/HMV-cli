@@ -108,7 +108,6 @@ def checkLevel(level, machines_tab, machineInfo):
 
 def machines(levelglob):
     machines_tab = PrettyTable(["Machine name","Level","Status","Creator"])
-
     session = makeSession()
     login_send = makeSessionLogin(session)
     machines_div = getMachines(session)
@@ -120,11 +119,14 @@ def machines(levelglob):
         try:
           machineInfo = getMachineInfo(machine)
 
-          if machineInfo['name'].text == "Search":
+          #seems one line is returned but not really a system
+          if machineInfo['name'].text == "Search": 
             pass
-          elif (machineInfo['level'].text == "TO HACK") or (machineInfo['level'].text == "HACKED"):
-            print(machineInfo['level']
-            pass
+
+          #cant find any use for this code
+          #elif (machineInfo['level'].text == "TO HACK") or (machineInfo['level'].text == "HACKED"):
+          # print(machineInfo['level'])
+          #  pass
 
           #Check for EASY systems
           elif (levelglob == "easy"):
@@ -149,9 +151,8 @@ def machines(levelglob):
 
         except:
           pass
-    #################
 
-    #    print (machines_tab)
+    print (machines_tab)
 
 def download(machine_name):
   url="https://downloads.hackmyvm.eu/"+str(machine_name).lower()+".zip"
@@ -187,23 +188,26 @@ def sendFlag(flag,vm):
       print ("[!] - Error")
 
 
-# ARGUMENTS
-if args['machines'] == "easy":
-  machines("easy")
-if args['machines'] == "medium":
-  machines("medium")
-if args['machines'] == "hard":
-        machines("hard")
-if args['machines'] == "all":
-        machines("all")
+def main():
+  # ARGUMENTS
+  if args['machines'] == "easy":
+    machines("easy")
+  if args['machines'] == "medium":
+    machines("medium")
+  if args['machines'] == "hard":
+    machines("hard")
+  if args['machines'] == "all":
+    machines("all")
 
-if args['download']:
-  machine_name = args['download']
-  download(machine_name)
+  if args['download']:
+    machine_name = args['download']
+    download(machine_name)
 
-if args['input']:
-  if args['vm']:
-    flag = args['input']
-    vm = args['vm']
-    sendFlag(flag,vm)
+  if args['input']:
+    if args['vm']:
+      flag = args['input']
+      vm = args['vm']
+      sendFlag(flag,vm)
 
+if __name__ == "__main__":
+  main()
