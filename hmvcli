@@ -1,12 +1,13 @@
 #!/usr/bin/python3
-import requests
-import os
-from halo import Halo
 from bs4 import BeautifulSoup
+from halo import Halo
 from prettytable import PrettyTable
 import argparse
-import urllib.request
 import gdown
+import os
+import requests
+import re
+import urllib.request
 
 class bcolors:
     OKGREEN = '\033[92m'
@@ -18,137 +19,190 @@ parser.add_argument('-m','--machines', help='View machines by dificult. Ex: hmvc
 parser.add_argument('-d','--download', help='Download machine of hackmyvm. Ex: hmvcli.py -d Soul')
 parser.add_argument('-i','--input', help='Input the flag for machine. Ex: hmvcli.py -i flag -vm Soul')
 parser.add_argument('-vm','--vm', help='Machine name to insert the flag. Use with argument -i')
+#New
+parser.add_argument('-u', '--username', help='username')
+parser.add_argument('-p', '--password', help='password')
+"""
+ToAdd
+parser.add_argument('--debug', help='debuging')
+parser.add_argument('-H', '--Hacked', help='Only show Hacked Machines', action="store_true")
+"""
+
 args = vars(parser.parse_args())
 
-user="" #CHANGE 
-password="" #CHANGE
+user =  args['username']
+password = args['password']
 
+#Create and return a session
+def makeSession():
+  return requests.Session()
+
+#Return a logged in Session
+def makeSessionLogin(s,user=user,password=password):
+  url = "https://hackmyvm.eu/login/auth.php"
+  data = {
+           "admin" : user,
+           "password_usuario" : password
+           }
+  r = s.post(url, data, allow_redirects=True)
+
+  return r
+
+#Grab the table of machines from html
+def getMachines(session):
+
+    machines_url = "https://hackmyvm.eu/machines/"
+    get_machines = session.get(machines_url)
+    soup = BeautifulSoup(get_machines.text, 'html.parser')
+    machines_div = soup.findAll('div', {'class':'container mt-5'})
+
+    return machines_div
+
+def getMachineInfo(machine):
+  machineInfo = {
+      'name' : machine.find('a'),
+      'level' : machine.find('div', {'class':'badge'}),
+      'status_tohack' : machine.find('div', {'class':'badge badge-secondary'}),
+      'status_hacked' : machine.find('div', {'class':'badge badge-light'}), 
+      'creator' : machine.findAll('div', {'class':'py-3 col'})
+      }
+  return machineInfo
+
+
+def buildTable(machineInfo,machines_tab):
+  if machineInfo['status_tohack']: #hacked? 
+    machines_tab.add_row([
+                             machineInfo['name'].text,
+                             machineInfo['level'].text, 
+                             bcolors.WARNING+machineInfo['status_tohack'].text+bcolors.ENDC,
+                             machineInfo['creator'][1].text
+                          ]) 
+  else: 
+    machines_tab.add_row([ 
+                            machineInfo['name'].text, 
+                            machineInfo['level'].text, 
+                            bcolors.OKGREEN+machineInfo['status_hacked'].text+bcolors.ENDC, 
+                            machineInfo['creator'][1].text 
+                          ]) 
+  return machines_tab
+  
+#Check based on levels
+def checkLevel(level, machines_tab, machineInfo):
+  if level == "easy":
+    if re.match("(E|e)asy", machineInfo['level'].text):
+      machines_tab = buildTable(machineInfo,machines_tab)
+
+  if level == "medium":
+    if re.match("(M|m)edium", machineInfo['level'].text):
+      machines_tab = buildTable(machineInfo,machines_tab)
+
+  if level == "hard":
+    if re.match("(H|h)ard", machineInfo['level'].text):
+      machines_tab = buildTable(machineInfo,machines_tab)
+
+  if level == "all":
+    #if re.match("(H|h)ard", machineInfo['level'].text):
+    machines_tab = buildTable(machineInfo,machines_tab)
+
+  return machines_tab
 
 def machines(levelglob):
-	machines_tab = PrettyTable(["Machine name","Level","Status","Creator"])
+    machines_tab = PrettyTable(["Machine name","Level","Status","Creator"])
 
-	with requests.Session() as session:
-		#LOGIN ON HACKMYVM
-		login = "https://hackmyvm.eu/login/auth.php"
-		data = {
-			"admin":user,
-			"password_usuario":password
-			}
-		login_send = session.post(login,data,allow_redirects=True)
+    session = makeSession()
+    login_send = makeSessionLogin(session)
+    machines_div = getMachines(session)
 
+    for machines in machines_div:
+      machines =  machines.findAll('div', {'class': 'row'})
 
-		#MACHINES
-		machines_url = "https://hackmyvm.eu/machines/"
-		get_machines = session.get(machines_url)
-		soup = BeautifulSoup(get_machines.text, 'html.parser')
-		machines_div = soup.findAll('div', {'class':'container mt-5'})
-		for machines in machines_div:
-			machines =  machines.findAll('div', {'class': 'row'})
-			for machine in machines:
-				try:
-					name = machine.find('a')
-					level = machine.find('div', {'class':'badge'})
-					status_tohack = machine.find('div', {'class':'badge badge-secondary'})
-					status_hacked = machine.find('div', {'class':'badge badge-light'})
-					creator = machine.findAll('div', {'class':'py-3 col'})
+      for machine in machines:
+        try:
+          machineInfo = getMachineInfo(machine)
 
-					if name.text == "Search":
-						pass
-					elif (level.text == "TO HACK") or (level.text == "HACKED"):
-						pass
-					elif (levelglob == "easy"):
-						if (level.text == "Medium") or (level.text == "Hard"):
-							pass
-						else:
-							if status_tohack:
-								machines_tab.add_row([name.text,level.text, bcolors.WARNING+status_tohack.text+bcolors.ENDC,creator[1].text])
-							else:
-        	                                                machines_tab.add_row([name.text,level.text, bcolors.OKGREEN+status_hacked.text+bcolors.ENDC,creator[1].text])
-					elif (levelglob == "medium"):
-						if (level.text == "Easy") or (level.text == "easy") or (level.text == "Hard") :
-							pass
-						else:
-							if status_tohack:
-                                                               machines_tab.add_row([name.text,level.text, bcolors.WARNING+status_tohack.text+bcolors.ENDC,creator[1].text])
-							else:
-                                                               machines_tab.add_row([name.text,level.text, bcolors.OKGREEN+status_hacked.text+bcolors.ENDC,creator[1].text])
-					elif (levelglob == "hard"):
-						if (level.text == "Easy") or (level.text == "easy") or (level.text == "Medium") :
-                                                        pass
-						else:
-							if status_tohack:
-                                                               machines_tab.add_row([name.text,level.text, bcolors.WARNING+status_tohack.text+bcolors.ENDC,creator[1].text])
-							else:
-                                                               machines_tab.add_row([name.text,level.text, bcolors.OKGREEN+status_hacked.text+bcolors.ENDC,creator[1].text])
-					elif (levelglob == "all"):
-							if status_tohack:
-                                                               machines_tab.add_row([name.text,level.text, bcolors.WARNING+status_tohack.text+bcolors.ENDC,creator[1].text])
-							else:
-                                                               machines_tab.add_row([name.text,level.text, bcolors.OKGREEN+status_hacked.text+bcolors.ENDC,creator[1].text])
+          if machineInfo['name'].text == "Search":
+            pass
+          elif (machineInfo['level'].text == "TO HACK") or (machineInfo['level'].text == "HACKED"):
+            pass
 
-					else:
-						if status_tohack:
-							machines_tab.add_row([name.text,level.text, bcolors.WARNING+status_tohack.text+bcolors.ENDC,creator[1].text])
-						else:
-							machines_tab.add_row([name.text,level.text, bcolors.OKGREEN+status_hacked.text+bcolors.ENDC,creator[1].text])
-				except:
-					pass
+          #Check for EASY systems
+          elif (levelglob == "easy"):
+            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
+            #machines_tab=isEasy(machines_tab,machineInfo)
 
-	print (machines_tab)
+          #Check for Medium systems
+          elif (levelglob == "medium"):
+            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
+
+          #Check for Hard systems
+          elif (levelglob == "hard"):
+            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
+
+          #Check for all systems
+          elif (levelglob == "all"):
+            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
+
+          #same as all
+          else: 
+            machines_tab=checkLevel("all", machines_tab,machineInfo)
+
+        except:
+          pass
+    #################
+
+    print (machines_tab)
 
 def download(machine_name):
-	url="https://downloads.hackmyvm.eu/"+str(machine_name).lower()+".zip"
-	url_gdrive = os.popen('curl -w "%{url_effective}\n" -I -L -s -S '+url+' -o /dev/null').read()
-	url_gdrive = url_gdrive.replace("https://drive.google.com/file/d/","")
-	url_gdrive = url_gdrive.replace("/view?usp=sharing\n","")
-	url_gdrive = "https://drive.google.com/uc?id="+url_gdrive
-	filename = str(machine_name).lower()+".zip"
-	gdown.download(url_gdrive, filename, quiet=False)
-	print ("[+] "+machine_name+" as been downloaded!")
+  url="https://downloads.hackmyvm.eu/"+str(machine_name).lower()+".zip"
+  url_gdrive = os.popen('curl -w "%{url_effective}\n" -I -L -s -S '+url+' -o /dev/null').read()
+  url_gdrive = url_gdrive.replace("https://drive.google.com/file/d/","")
+  url_gdrive = url_gdrive.replace("/view?usp=sharing\n","")
+  url_gdrive = "https://drive.google.com/uc?id="+url_gdrive
+  filename = str(machine_name).lower()+".zip"
+  gdown.download(url_gdrive, filename, quiet=False)
+  print ("[+] "+machine_name+" as been downloaded!")
 
 def sendFlag(flag,vm):
-	with requests.Session() as session:
-		login = "https://hackmyvm.eu/login/auth.php"
-		data = {
-			"admin":user,
-			"password_usuario":password
-			}
-		login_send = session.post(login,data,allow_redirects=True)
+  with requests.Session() as session:
+    login = "https://hackmyvm.eu/login/auth.php"
+    data = {
+      "admin":user,
+      "password_usuario":password
+      }
+    login_send = session.post(login,data,allow_redirects=True)
 
-		url_flag = "https://hackmyvm.eu/machines/checkflag.php"
-		data_flag = {
-				"flag":flag,
-				"vm":vm
-				}
+    url_flag = "https://hackmyvm.eu/machines/checkflag.php"
+    data_flag = {
+        "flag":flag,
+        "vm":vm
+        }
 
-		flag_send = session.post(url_flag,data_flag)
-		if "wrong" in flag_send.text:
-			print ("[!] - The flag inserted is wrong!")
-		elif "Correct" in flag_send.text:
-			print ("[+] - The flag inserted is CORRECT!")
-		else:
-			print ("[!] - Error")
-
+    flag_send = session.post(url_flag,data_flag)
+    if "wrong" in flag_send.text:
+      print ("[!] - The flag inserted is wrong!")
+    elif "Correct" in flag_send.text:
+      print ("[+] - The flag inserted is CORRECT!")
+    else:
+      print ("[!] - Error")
 
 
 # ARGUMENTS
-
 if args['machines'] == "easy":
-	machines("easy")
+  machines("easy")
 if args['machines'] == "medium":
-	machines("medium")
+  machines("medium")
 if args['machines'] == "hard":
         machines("hard")
 if args['machines'] == "all":
         machines("all")
 
 if args['download']:
-	machine_name = args['download']
-	download(machine_name)
+  machine_name = args['download']
+  download(machine_name)
 
 if args['input']:
-	if args['vm']:
-		flag = args['input']
-		vm = args['vm']
-		sendFlag(flag,vm)
+  if args['vm']:
+    flag = args['input']
+    vm = args['vm']
+    sendFlag(flag,vm)
 

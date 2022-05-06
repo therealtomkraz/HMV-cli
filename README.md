@@ -1,5 +1,11 @@
 # HMV-cli
 
+
+## New
+Added command line user/name password
+Modulized a bit more
+
+
 ![HMV-cli](https://i.ibb.co/7V7vPVs/unknown.png)
 
 It is a tool for the HackMyVM platform. 
@@ -75,3 +81,4 @@ hmvcli -i flag -vm Soul
 
 ## Contribuir
 Las pull requests son bien recibidas!
+
