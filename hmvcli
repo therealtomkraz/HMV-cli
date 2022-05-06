@@ -123,6 +123,7 @@ def machines(levelglob):
           if machineInfo['name'].text == "Search":
             pass
           elif (machineInfo['level'].text == "TO HACK") or (machineInfo['level'].text == "HACKED"):
+            print(machineInfo['level']
             pass
 
           #Check for EASY systems
@@ -150,7 +151,7 @@ def machines(levelglob):
           pass
     #################
 
-    print (machines_tab)
+    #    print (machines_tab)
 
 def download(machine_name):
   url="https://downloads.hackmyvm.eu/"+str(machine_name).lower()+".zip"
