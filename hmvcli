@@ -22,11 +22,6 @@ parser.add_argument('-vm','--vm', help='Machine name to insert the flag. Use wit
 #New
 parser.add_argument('-u', '--username', help='username')
 parser.add_argument('-p', '--password', help='password')
-"""
-ToAdd
-parser.add_argument('--debug', help='debuging')
-parser.add_argument('-H', '--Hacked', help='Only show Hacked Machines', action="store_true")
-"""
 
 args = vars(parser.parse_args())
 
@@ -101,7 +96,6 @@ def checkLevel(level, machines_tab, machineInfo):
       machines_tab = buildTable(machineInfo,machines_tab)
 
   if level == "all":
-    #if re.match("(H|h)ard", machineInfo['level'].text):
     machines_tab = buildTable(machineInfo,machines_tab)
 
   return machines_tab
@@ -123,31 +117,9 @@ def machines(levelglob):
           if machineInfo['name'].text == "Search": 
             pass
 
-          #cant find any use for this code
-          #elif (machineInfo['level'].text == "TO HACK") or (machineInfo['level'].text == "HACKED"):
-          # print(machineInfo['level'])
-          #  pass
-
-          #Check for EASY systems
-          elif (levelglob == "easy"):
-            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
-            #machines_tab=isEasy(machines_tab,machineInfo)
-
-          #Check for Medium systems
-          elif (levelglob == "medium"):
-            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
-
-          #Check for Hard systems
-          elif (levelglob == "hard"):
-            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
-
-          #Check for all systems
-          elif (levelglob == "all"):
-            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
-
           #same as all
           else: 
-            machines_tab=checkLevel("all", machines_tab,machineInfo)
+            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
 
         except:
           pass
@@ -187,17 +159,14 @@ def sendFlag(flag,vm):
     else:
       print ("[!] - Error")
 
+def confirmArgs(args):
+  pass
 
 def main():
   # ARGUMENTS
-  if args['machines'] == "easy":
-    machines("easy")
-  if args['machines'] == "medium":
-    machines("medium")
-  if args['machines'] == "hard":
-    machines("hard")
-  if args['machines'] == "all":
-    machines("all")
+
+  if args['machines']: 
+    machines(args['machines'])
 
   if args['download']:
     machine_name = args['download']
