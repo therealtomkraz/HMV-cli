@@ -14,23 +14,30 @@ class bcolors:
     WARNING = '\033[93m'
     ENDC = '\033[0m'
 
+#Set up Arguments
 parser = argparse.ArgumentParser(description='CLI tool for HackMyVM')
 parser.add_argument('-m','--machines', help='View machines by dificult. Ex: hmvcli.py -m easy | Options: easy/medium/hard/all')
 parser.add_argument('-d','--download', help='Download machine of hackmyvm. Ex: hmvcli.py -d Soul')
 parser.add_argument('-i','--input', help='Input the flag for machine. Ex: hmvcli.py -i flag -vm Soul')
 parser.add_argument('-vm','--vm', help='Machine name to insert the flag. Use with argument -i')
-#New
 parser.add_argument('-u', '--username', help='username')
 parser.add_argument('-p', '--password', help='password')
+parser.add_argument('-I', '--info', help='gets info on Machine')
 
 args = vars(parser.parse_args())
 
 user =  args['username']
 password = args['password']
 
-#Create and return a session
-def makeSession():
-  return requests.Session()
+#Create and return a session and login if required
+def makeSession(login=False):
+  s = requests.Session()
+
+  if login:
+    makeSessionLogin(s)
+    return s
+  else:
+    return s
 
 #Return a logged in Session
 def makeSessionLogin(s,user=user,password=password):
@@ -100,6 +107,7 @@ def checkLevel(level, machines_tab, machineInfo):
 
   return machines_tab
 
+#Get level informaiton about VMs. 
 def machines(levelglob):
     machines_tab = PrettyTable(["Machine name","Level","Status","Creator"])
     session = makeSession()
@@ -126,6 +134,7 @@ def machines(levelglob):
 
     print (machines_tab)
 
+#Download VM
 def download(machine_name):
   url="https://downloads.hackmyvm.eu/"+str(machine_name).lower()+".zip"
   url_gdrive = os.popen('curl -w "%{url_effective}\n" -I -L -s -S '+url+' -o /dev/null').read()
@@ -159,15 +168,59 @@ def sendFlag(flag,vm):
     else:
       print ("[!] - Error")
 
-def confirmArgs(args):
-  pass
+#Get the number of write ups per vm
+def numberOfWriteups(soup): 
+  writers = []
+  try:
+    writeups = soup.find('div', {'class':'col-5'})
+    rows = writeups.findAll('strong')
+    for row in rows:
+      writers.append(row.text)
+    return len(writers)
+  except:
+    return 0
+
+#Get the Machine Tip from the Info page. 
+def getMachineInfoTip(soup):
+   return soup.find_all('div',{'class': 'mt-3'})[0].text.strip()
+
+#Make Machine Info Table. 
+def makeMachineInfoTable(results,machine):
+  machine_tab = PrettyTable(["Machine name","Level","Creator","Released","Tip","No. Writeups"])
+  machine_tab.add_row([ machine, results[1], results[0], results[2],results[-2],results[-1]])
+  print(machine_tab)
+
+#Get deep information on the VM in question
+def getGrainularInfo(soup,machine):
+  results = []
+  allrows = soup.findAll('tr')
+  for row in allrows:
+    allcols = row.findAll('td')
+    for col in allcols:
+      results.append(col.text)
+
+  results.append(getMachineInfoTip(soup)) #Add the tip
+  results.append(numberOfWriteups(soup)) #Number of writeups on page. 
+
+  #print(results)
+  makeMachineInfoTable(results,machine) #Lets make a table from results
+
+#Create a session and some soup for the Machine Info Page
+def getVMInfo(machine):
+  s = makeSession(login=True)
+  url = f'https://hackmyvm.eu/machines/machine.php?vm={machine}'
+  print(url)
+  r = s.get(url)
+  soup = BeautifulSoup(r.content, 'html.parser')
+  getGrainularInfo(soup,machine)
 
 def main():
-  # ARGUMENTS
-
+# ARGUMENTS
+#Get some info about the medium/easy/hard/all vms
   if args['machines']: 
     machines(args['machines'])
 
+#Download vms
   if args['download']:
     machine_name = args['download']
     download(machine_name)
@@ -177,6 +230,10 @@ def main():
       flag = args['input']
       vm = args['vm']
       sendFlag(flag,vm)
+
+#Get some info about the vm
+  if args['info']:
+    getVMInfo(args['info'])
 
 if __name__ == "__main__":
   main()

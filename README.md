@@ -6,6 +6,10 @@ Added command line user/name password
 
 Modulized a bit more
 
+added -I to give more information about a VM
+
+Added requirments.txt file
+
 
 ![HMV-cli](https://i.ibb.co/7V7vPVs/unknown.png)
 
