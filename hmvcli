@@ -225,6 +225,7 @@ def main():
     machine_name = args['download']
     download(machine_name)
 
+#Input the flag
   if args['input']:
     if args['vm']:
       flag = args['input']
