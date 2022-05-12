@@ -68,9 +68,11 @@ def getMachineInfo(machine):
       'status_hacked' : machine.find('div', {'class':'badge badge-light'}), 
       'creator' : machine.findAll('div', {'class':'py-3 col'})
       }
+
   return machineInfo
 
 
+#Build a table based on VM Level and if hacked or not. 
 def buildTable(machineInfo,machines_tab):
   if machineInfo['status_tohack']: #hacked? 
     machines_tab.add_row([
@@ -122,8 +124,9 @@ def machines(levelglob):
           machineInfo = getMachineInfo(machine)
 
           #seems one line is returned but not really a system
-          if machineInfo['name'].text == "Search": 
-            pass
+          if machineInfo['name'].text != "Search": 
+            machines_tab=checkLevel(levelglob, machines_tab,machineInfo)
+            #pass
 
           #same as all
           else: 
@@ -143,7 +146,13 @@ def download(machine_name):
   url_gdrive = "https://drive.google.com/uc?id="+url_gdrive
   filename = str(machine_name).lower()+".zip"
   gdown.download(url_gdrive, filename, quiet=False)
-  print ("[+] "+machine_name+" as been downloaded!")
+  if os.path.exists(filename):
+    print ("[+] "+machine_name+" as been downloaded!")
+  else:
+    text = bcolors.WARNING + "[+] " + machine_name + " Download Failed!" + bcolors.ENDC
+    #print ("[+] "+machine_name+" download Failed!")
+    print(text)
+
 
 def sendFlag(flag,vm):
   with requests.Session() as session:
@@ -186,8 +195,15 @@ def getMachineInfoTip(soup):
 
 #Make Machine Info Table. 
 def makeMachineInfoTable(results,machine):
-  machine_tab = PrettyTable(["Machine name","Level","Creator","Released","Tip","No. Writeups"])
-  machine_tab.add_row([ machine, results[1], results[0], results[2],results[-2],results[-1]])
+  machine_tab = PrettyTable(["Machine name","Level","Creator","Released","No. Writeups","Tip"])
+
+  machine_tab.add_row([ machine, 
+                        results[1], 
+                        results[0], 
+                        results[2],
+                        results[-1],
+                        results[-2]
+                        ])
   print(machine_tab)
 
 #Get deep information on the VM in question
@@ -209,14 +225,14 @@ def getGrainularInfo(soup,machine):
 def getVMInfo(machine):
   s = makeSession(login=True)
   url = f'https://hackmyvm.eu/machines/machine.php?vm={machine}'
-  print(url)
+  #print(url)
   r = s.get(url)
   soup = BeautifulSoup(r.content, 'html.parser')
   getGrainularInfo(soup,machine)
 
-def main():
-# ARGUMENTS
+#Main 
 #Get some info about the medium/easy/hard/all vms
+def main():
   if args['machines']: 
     machines(args['machines'])
 
@@ -235,6 +251,7 @@ def main():
 #Get some info about the vm
   if args['info']:
     getVMInfo(args['info'])
+
 
 if __name__ == "__main__":
   main()
